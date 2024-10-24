@@ -1,4 +1,3 @@
-// routes/clientes.js
 const express = require('express');
 const router = express.Router();
 
@@ -14,9 +13,17 @@ module.exports = (db) => {
     // Crear un nuevo cliente
     router.post('/', (req, res) => {
         const { nombre, direccion, telefono, producto_id, quilates, precio_total, forma_pago } = req.body;
-        db.query('INSERT INTO Cliente (nombre, direccion, telefono, producto_id, quilates, precio_total, forma_pago) VALUES (?, ?, ?, ?, ?, ?, ?)', [nombre, direccion, telefono, producto_id, quilates, precio_total, forma_pago], (err, results) => {
+
+        if (!nombre || !direccion || !telefono || !producto_id || !quilates || !precio_total || !forma_pago) {
+            return res.status(400).json({ error: 'Todos los campos son requeridos' });
+        }
+
+        const query = 'INSERT INTO Cliente (nombre, direccion, telefono, producto_id, quilates, precio_total, forma_pago) VALUES (?, ?, ?, ?, ?, ?, ?)';
+        const values = [nombre, direccion, telefono, producto_id, quilates, precio_total, forma_pago];
+
+        db.query(query, values, (err, result) => {
             if (err) return res.status(500).json({ error: err });
-            res.status(201).json({ id_cliente: results.insertId, nombre });
+            res.status(201).json({ message: 'Cliente agregado exitosamente', clienteId: result.insertId });
         });
     });
 
