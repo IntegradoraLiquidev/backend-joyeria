@@ -1,22 +1,29 @@
-// routes/usuarios.js
 const express = require('express');
 const router = express.Router();
+const jwt = require('jsonwebtoken'); // Para generar el token JWT
 
 module.exports = (db) => {
-    // Obtener todos los usuarios
-    router.get('/', (req, res) => {
-        db.query('SELECT * FROM Usuario', (err, results) => {
-            if (err) return res.status(500).json({ error: err });
-            res.json(results);
-        });
-    });
+    // Ruta de inicio de sesión
+    router.post('/login', (req, res) => {
+        const { email, password } = req.body;
+        console.log('Solicitud de login con email:', email);
 
-    // Crear un nuevo usuario
-    router.post('/', (req, res) => {
-        const { correo, contraseña, rol } = req.body;
-        db.query('INSERT INTO Usuario (correo, contraseña, rol) VALUES (?, ?, ?)', [correo, contraseña, rol], (err, results) => {
+        // Buscar al usuario en la base de datos
+        db.query('SELECT * FROM Usuario WHERE email = ?', [email], (err, results) => {
             if (err) return res.status(500).json({ error: err });
-            res.status(201).json({ id_usuario: results.insertId, correo, rol });
+            if (results.length === 0) return res.status(404).json({ message: 'Usuario no encontrado' });
+
+            const user = results[0];
+
+            // Comparar contraseñas directamente sin bcrypt
+            if (password !== user.password) {
+                return res.status(401).json({ message: 'Contraseña incorrecta' });
+            }
+
+            // Generar token JWT
+            const token = jwt.sign({ id: user.id_usuario, role: user.rol }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+            res.json({ token });
         });
     });
 
