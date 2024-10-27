@@ -10,6 +10,14 @@ module.exports = (db) => {
         });
     });
 
+    router.get('/', (req, res) => {
+        db.query('SELECT id_cliente, nombre, direccion, telefono, producto_id, quilates, precio_total, forma_pago, id_trabajador FROM Cliente', (err, results) => {
+            if (err) return res.status(500).json({ error: err });
+            res.json(results);
+        });
+    });
+
+
     // Crear un nuevo cliente
     router.post('/', (req, res) => {
         const { nombre, direccion, telefono, producto_id, quilates, precio_total, forma_pago } = req.body;
