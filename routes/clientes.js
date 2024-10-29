@@ -99,17 +99,6 @@ module.exports = (db) => {
         });
     });
 
-    // Obtener historial de abonos para un cliente específico
-    router.get('/:id/abonos', (req, res) => {
-        const clienteId = req.params.id;
-
-        const query = 'SELECT monto, fecha FROM abonos WHERE cliente_id = ? ORDER BY fecha DESC';
-        db.query(query, [clienteId], (err, results) => {
-            if (err) return res.status(500).json({ error: err });
-            res.json(results);
-        });
-    });
-
     router.put('/:id/incrementarMonto', (req, res) => {
         const clienteId = req.params.id;
         const { incremento } = req.body;
@@ -117,10 +106,32 @@ module.exports = (db) => {
         const query = `UPDATE Cliente SET monto_actual = monto_actual + ? WHERE id_cliente = ?`;
         db.query(query, [incremento, clienteId], (err, result) => {
             if (err) return res.status(500).json({ error: err });
-            res.status(200).json({ message: 'Monto actual incrementado exitosamente' });
+    
+            // Agregar el registro del "no abono" en la tabla de abonos
+            const insertNoAbono = `
+                INSERT INTO abonos (cliente_id, monto, fecha, estado)
+                VALUES (?, ?, NOW(), 'no_abono')
+            `;
+            db.query(insertNoAbono, [clienteId, incremento], (err, result) => {
+                if (err) return res.status(500).json({ error: err });
+    
+                res.status(200).json({ message: 'Monto incrementado exitosamente y no abono registrado' });
+            });
         });
     });
     
+
+    // Obtener historial de abonos para un cliente específico
+    router.get('/:id/abonos', (req, res) => {
+        const clienteId = req.params.id;
+
+        const query = 'SELECT monto, fecha, estado FROM abonos WHERE cliente_id = ? ORDER BY fecha DESC';
+        db.query(query, [clienteId], (err, results) => {
+            if (err) return res.status(500).json({ error: err });
+            res.json(results);
+        });
+    });
+
 
 
     // Crear un nuevo cliente
