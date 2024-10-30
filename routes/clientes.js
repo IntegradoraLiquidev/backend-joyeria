@@ -130,24 +130,24 @@ module.exports = (db) => {
 
     // Crear un nuevo cliente
     router.post('/', (req, res) => {
-        const { nombre, direccion, telefono, producto_id, quilates, precio_total, forma_pago } = req.body;
-
+        const { nombre, direccion, telefono, producto_id, quilates, precio_total, forma_pago, monto_actual } = req.body;
+    
         if (!nombre || !direccion || !telefono || !producto_id || !quilates || !precio_total || !forma_pago) {
             return res.status(400).json({ error: 'Todos los campos son requeridos' });
         }
-
-        // Asignar monto_actual con el valor de precio_total automáticamente
+    
         const query = `
-        INSERT INTO Cliente (nombre, direccion, telefono, producto_id, quilates, precio_total, forma_pago, monto_actual)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-        const values = [nombre, direccion, telefono, producto_id, quilates, precio_total, forma_pago, precio_total];
-
+            INSERT INTO Cliente (nombre, direccion, telefono, producto_id, quilates, precio_total, forma_pago, monto_actual)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+        const values = [nombre, direccion, telefono, producto_id, quilates, precio_total, forma_pago, monto_actual];
+    
         db.query(query, values, (err, result) => {
             if (err) return res.status(500).json({ error: err });
             res.status(201).json({ message: 'Cliente agregado exitosamente', clienteId: result.insertId });
         });
     });
+    
 
     return router;
 
