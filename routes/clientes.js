@@ -5,150 +5,107 @@ module.exports = (db) => {
 
     // Obtener todos los clientes
     router.get('/', (req, res) => {
-        db.query('SELECT id_cliente, nombre, direccion, telefono, producto_id, quilates, precio_total, forma_pago, monto_actual, id_trabajador FROM Cliente', (err, results) => {
+        db.query('SELECT * FROM Cliente', (err, results) => {
             if (err) return res.status(500).json({ error: err });
             res.json(results);
         });
     });
 
-    // Endpoint para obtener los detalles de un cliente específico
+    // Obtener los detalles de un cliente específico
     router.get('/:id', (req, res) => {
         const clienteId = req.params.id;
-
-        const query = 'SELECT nombre, direccion, telefono, precio_total, monto_actual, forma_pago FROM Cliente WHERE id_cliente = ?';
-        db.query(query, [clienteId], (err, results) => {
+        db.query('SELECT * FROM Cliente WHERE id_cliente = ?', [clienteId], (err, result) => {
             if (err) return res.status(500).json({ error: err });
-
-            if (results.length === 0) {
-                return res.status(404).json({ error: 'Cliente no encontrado' });
-            }
-
-            res.json(results[0]);
+            if (result.length === 0) return res.status(404).json({ error: 'Cliente no encontrado' });
+            res.json(result[0]);
         });
     });
 
-    // Endpoint para agregar un abono a un cliente específico
+    // Agregar un abono y actualizar el monto del cliente
     router.post('/:id/abonos', (req, res) => {
         const clienteId = req.params.id;
         const { monto, fecha } = req.body;
 
-        // Validar que monto y fecha no sean nulos
         if (!monto || !fecha) {
             return res.status(400).json({ error: 'Monto y fecha son requeridos' });
         }
 
-        // Asegurarse de que el monto sea un número válido
-        const parsedMonto = parseFloat(monto);
-        if (isNaN(parsedMonto)) {
-            return res.status(400).json({ error: 'El monto debe ser un número válido' });
-        }
+        db.beginTransaction(err => {
+            if (err) return res.status(500).json({ error: 'Error al iniciar transacción' });
 
-        // Iniciar transacción
-        db.beginTransaction((err) => {
-            if (err) {
-                return res.status(500).json({ error: 'Error al iniciar transacción' });
-            }
-
-            // Insertar el abono en la tabla 'abonos'
             const insertAbonoQuery = 'INSERT INTO abonos (cliente_id, monto, fecha, estado) VALUES (?, ?, ?, ?)';
-            const abonoValues = [clienteId, parsedMonto, fecha, 'pagado'];
+            const abonoValues = [clienteId, monto, fecha, 'pagado'];
 
-            db.query(insertAbonoQuery, abonoValues, (err, result) => {
+            db.query(insertAbonoQuery, abonoValues, (err) => {
                 if (err) {
-                    return db.rollback(() => {
-                        console.error('Error al agregar abono:', err);  // Log de error
-                        return res.status(500).json({ error: 'Error al procesar el abono' });
-                    });
+                    return db.rollback(() => res.status(500).json({ error: 'Error al agregar abono' }));
                 }
 
-                // Actualizar el monto_actual del cliente
-                const updateMontoQuery = `
-                UPDATE Cliente
-                SET monto_actual = GREATEST(monto_actual - ?, 0)
-                WHERE id_cliente = ?
-            `;
-                const updateValues = [parsedMonto, clienteId];
+                const updateMontoQuery = 'UPDATE Cliente SET monto_actual = GREATEST(monto_actual - ?, 0) WHERE id_cliente = ?';
+                const updateValues = [monto, clienteId];
 
-                db.query(updateMontoQuery, updateValues, (err, updateResult) => {
+                db.query(updateMontoQuery, updateValues, (err) => {
                     if (err) {
-                        return db.rollback(() => {
-                            console.error('Error al actualizar monto_actual:', err);  // Log de error
-                            return res.status(500).json({ error: 'Error al actualizar el monto actual del cliente' });
-                        });
+                        return db.rollback(() => res.status(500).json({ error: 'Error al actualizar el monto del cliente' }));
                     }
 
-                    // Confirmar la transacción si todo fue exitoso
-                    db.commit((err) => {
+                    db.commit(err => {
                         if (err) {
-                            return db.rollback(() => {
-                                console.error('Error al confirmar la transacción:', err);  // Log de error
-                                return res.status(500).json({ error: 'Error al confirmar la transacción' });
-                            });
+                            return db.rollback(() => res.status(500).json({ error: 'Error al confirmar transacción' }));
                         }
 
-                        res.status(201).json({ message: 'Abono agregado exitosamente y monto actual actualizado' });
+                        res.status(201).json({ message: 'Abono agregado y monto actualizado' });
                     });
                 });
             });
         });
     });
 
+    // Incrementar el monto cuando no se paga
     router.put('/:id/incrementarMonto', (req, res) => {
         const clienteId = req.params.id;
         const { incremento } = req.body;
-    
-        const query = `UPDATE Cliente SET monto_actual = monto_actual + ? WHERE id_cliente = ?`;
-        db.query(query, [incremento, clienteId], (err, result) => {
+
+        db.query('UPDATE Cliente SET monto_actual = monto_actual + ? WHERE id_cliente = ?', [incremento, clienteId], (err) => {
             if (err) return res.status(500).json({ error: err });
-    
-            // Agregar el registro del "no abono" en la tabla de abonos
-            const insertNoAbono = `
-                INSERT INTO abonos (cliente_id, monto, fecha, estado)
-                VALUES (?, ?, NOW(), 'no_abono')
-            `;
-            db.query(insertNoAbono, [clienteId, incremento], (err, result) => {
+
+            db.query('INSERT INTO abonos (cliente_id, monto, fecha, estado) VALUES (?, ?, NOW(), ?)', [clienteId, incremento, 'no_abono'], (err) => {
                 if (err) return res.status(500).json({ error: err });
-    
-                res.status(200).json({ message: 'Monto incrementado exitosamente y no abono registrado' });
+                res.status(200).json({ message: 'Monto incrementado y no abono registrado' });
             });
         });
     });
-    
-
-    // Obtener historial de abonos para un cliente específico
-    router.get('/:id/abonos', (req, res) => {
-        const clienteId = req.params.id;
-
-        const query = 'SELECT monto, fecha, estado FROM abonos WHERE cliente_id = ? ORDER BY fecha DESC';
-        db.query(query, [clienteId], (err, results) => {
-            if (err) return res.status(500).json({ error: err });
-            res.json(results);
-        });
-    });
-
-
 
     // Crear un nuevo cliente
     router.post('/', (req, res) => {
         const { nombre, direccion, telefono, producto_id, quilates, precio_total, forma_pago, monto_actual } = req.body;
-    
+
         if (!nombre || !direccion || !telefono || !producto_id || !quilates || !precio_total || !forma_pago) {
             return res.status(400).json({ error: 'Todos los campos son requeridos' });
         }
-    
+
+        const fechaRegistro = new Date();
+        let fechaProximoPago;
+
+        if (forma_pago === 'diario') {
+            fechaProximoPago = new Date(fechaRegistro);
+            fechaProximoPago.setDate(fechaProximoPago.getDate() + 1);
+        } else if (forma_pago === 'semanal') {
+            fechaProximoPago = new Date(fechaRegistro);
+            fechaProximoPago.setDate(fechaProximoPago.getDate() + 7);
+        }
+
         const query = `
-            INSERT INTO Cliente (nombre, direccion, telefono, producto_id, quilates, precio_total, forma_pago, monto_actual)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO Cliente (nombre, direccion, telefono, producto_id, quilates, precio_total, forma_pago, monto_actual, fecha_registro, fecha_proximo_pago)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
-        const values = [nombre, direccion, telefono, producto_id, quilates, precio_total, forma_pago, monto_actual];
-    
+        const values = [nombre, direccion, telefono, producto_id, quilates, precio_total, forma_pago, monto_actual, fechaRegistro, fechaProximoPago];
+
         db.query(query, values, (err, result) => {
             if (err) return res.status(500).json({ error: err });
-            res.status(201).json({ message: 'Cliente agregado exitosamente', clienteId: result.insertId });
+            res.status(201).json({ message: 'Cliente creado exitosamente', clienteId: result.insertId });
         });
     });
-    
 
     return router;
-
 };
