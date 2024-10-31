@@ -21,10 +21,20 @@ module.exports = (db) => {
         });
     });
 
+    router.get('/:id/abonos', (req, res) => {
+        const clienteId = req.params.id;
+        const query = 'SELECT monto, fecha, estado FROM abonos WHERE cliente_id = ? ORDER BY fecha DESC';
+        db.query(query, [clienteId], (err, results) => {
+            if (err) return res.status(500).json({ error: err });
+            res.json(results);
+        });
+    });
+    
     // Agregar un abono y actualizar el monto del cliente
     router.post('/:id/abonos', (req, res) => {
         const clienteId = req.params.id;
         const { monto, fecha } = req.body;
+
 
         if (!monto || !fecha) {
             return res.status(400).json({ error: 'Monto y fecha son requeridos' });
@@ -60,6 +70,7 @@ module.exports = (db) => {
             });
         });
     });
+
 
     // Incrementar el monto cuando no se paga
     router.put('/:id/incrementarMonto', (req, res) => {
