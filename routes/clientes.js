@@ -29,47 +29,75 @@ module.exports = (db) => {
             res.json(results);
         });
     });
-    
+
     // Agregar un abono y actualizar el monto del cliente
     router.post('/:id/abonos', (req, res) => {
         const clienteId = req.params.id;
         const { monto, fecha } = req.body;
-
-
+    
         if (!monto || !fecha) {
             return res.status(400).json({ error: 'Monto y fecha son requeridos' });
         }
-
+    
         db.beginTransaction(err => {
             if (err) return res.status(500).json({ error: 'Error al iniciar transacción' });
-
+    
             const insertAbonoQuery = 'INSERT INTO abonos (cliente_id, monto, fecha, estado) VALUES (?, ?, ?, ?)';
             const abonoValues = [clienteId, monto, fecha, 'pagado'];
-
+    
             db.query(insertAbonoQuery, abonoValues, (err) => {
                 if (err) {
                     return db.rollback(() => res.status(500).json({ error: 'Error al agregar abono' }));
                 }
-
+    
                 const updateMontoQuery = 'UPDATE Cliente SET monto_actual = GREATEST(monto_actual - ?, 0) WHERE id_cliente = ?';
                 const updateValues = [monto, clienteId];
-
+    
                 db.query(updateMontoQuery, updateValues, (err) => {
                     if (err) {
                         return db.rollback(() => res.status(500).json({ error: 'Error al actualizar el monto del cliente' }));
                     }
-
-                    db.commit(err => {
-                        if (err) {
-                            return db.rollback(() => res.status(500).json({ error: 'Error al confirmar transacción' }));
+    
+                    db.query('SELECT forma_pago FROM Cliente WHERE id_cliente = ?', [clienteId], (err, results) => {
+                        if (err || results.length === 0) {
+                            return db.rollback(() => res.status(500).json({ error: 'Error al obtener forma de pago' }));
                         }
-
-                        res.status(201).json({ message: 'Abono agregado y monto actualizado' });
+    
+                        const formaPago = results[0].forma_pago;
+                        const nuevaFechaProximoPago = new Date();
+    
+                        if (formaPago === 'Diario') {
+                            nuevaFechaProximoPago.setDate(nuevaFechaProximoPago.getDate() + 1);
+                        } else if (formaPago === 'Semanal') {
+                            nuevaFechaProximoPago.setDate(nuevaFechaProximoPago.getDate() + 7);
+                        }
+    
+                        db.query(
+                            'UPDATE Cliente SET fecha_proximo_pago = ? WHERE id_cliente = ?',
+                            [nuevaFechaProximoPago.toISOString().split('T')[0], clienteId],
+                            (err) => {
+                                if (err) {
+                                    return db.rollback(() => res.status(500).json({ error: 'Error al actualizar fecha de próximo pago' }));
+                                }
+    
+                                db.commit(err => {
+                                    if (err) {
+                                        return db.rollback(() => res.status(500).json({ error: 'Error al confirmar transacción' }));
+                                    }
+    
+                                    res.status(201).json({
+                                        message: 'Abono agregado y próximo pago actualizado',
+                                        fecha_proximo_pago: nuevaFechaProximoPago.toISOString().split('T')[0]
+                                    });
+                                });
+                            }
+                        );
                     });
                 });
             });
         });
     });
+    
 
 
     // Incrementar el monto cuando no se paga
