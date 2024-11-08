@@ -113,8 +113,6 @@ module.exports = (db) => {
         });
     });
 
-
-
     // Incrementar el monto cuando no se paga
     router.put('/:id/incrementarMonto', (req, res) => {
         const clienteId = req.params.id;
