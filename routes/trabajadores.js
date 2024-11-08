@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const jwt = require('jsonwebtoken');
 
 module.exports = (db) => {
 
@@ -12,7 +11,7 @@ module.exports = (db) => {
         LEFT JOIN Cliente ON Usuario.id_usuario = Cliente.id_trabajador
         WHERE Usuario.rol = "Trabajador"
         GROUP BY Usuario.id_usuario;
-    `;
+        `;
         db.query(sql, (err, results) => {
             if (err) return res.status(500).json({ error: err });
             res.json(results);
@@ -27,7 +26,6 @@ module.exports = (db) => {
             return res.status(400).json({ message: 'Todos los campos son requeridos' });
         }
 
-        // Verificar si el trabajador ya existe
         const existingUserQuery = 'SELECT * FROM Usuario WHERE email = ?';
         db.query(existingUserQuery, [email], (err, results) => {
             if (err) return res.status(500).json({ message: 'Error en la base de datos' });
@@ -35,7 +33,6 @@ module.exports = (db) => {
                 return res.status(400).json({ message: 'El trabajador ya existe' });
             }
 
-            // Insertar el nuevo trabajador en la base de datos
             const insertUserQuery = `
                 INSERT INTO Usuario (nombre, apellidos, email, password, rol)
                 VALUES (?, ?, ?, ?, ?)
@@ -44,6 +41,17 @@ module.exports = (db) => {
                 if (err) return res.status(500).json({ message: 'Error al agregar el trabajador' });
                 res.status(201).json({ message: 'Trabajador agregado exitosamente' });
             });
+        });
+    });
+
+    // Eliminar un trabajador por su ID
+    router.delete('/eliminar/:id', (req, res) => {
+        const { id } = req.params;
+        const deleteUserQuery = 'DELETE FROM Usuario WHERE id_usuario = ?';
+        db.query(deleteUserQuery, [id], (err, result) => {
+            if (err) return res.status(500).json({ message: 'Error al eliminar el trabajador' });
+            if (result.affectedRows === 0) return res.status(404).json({ message: 'Trabajador no encontrado' });
+            res.json({ message: 'Trabajador eliminado exitosamente' });
         });
     });
 
