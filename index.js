@@ -1,4 +1,3 @@
-// index.js
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
@@ -6,10 +5,11 @@ const mysql = require('mysql2');
 const dotenv = require('dotenv');
 
 // Rutas
-const usuariosRoutes = require('./routes/usuarios');
+const authRoutes = require('./auth/auth');
 const productosRoutes = require('./routes/productos');
 const clientesRoutes = require('./routes/clientes');
 const categoriasRoutes = require('./routes/categorias');
+const trabajadoresRoutes = require('./routes/trabajadores'); // Nueva ruta de trabajadores
 
 dotenv.config();
 
@@ -35,10 +35,11 @@ db.connect((err) => {
 });
 
 // Usar las rutas
-app.use('/api/usuarios', usuariosRoutes(db));
+app.use('/api/auth', authRoutes(db));
 app.use('/api/productos', productosRoutes(db));
 app.use('/api/clientes', clientesRoutes(db));
 app.use('/api/categorias', categoriasRoutes(db));
+app.use('/api/trabajadores', trabajadoresRoutes(db)); // Usar la nueva ruta
 
 // Iniciar el servidor
 const PORT = process.env.PORT || 3000;
