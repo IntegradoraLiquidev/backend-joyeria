@@ -20,7 +20,7 @@ module.exports = (db) => {
 
             const user = results[0];
 
-            // Comparar contraseñas directamente (Recomendado: usar bcrypt para mayor seguridad)
+            // Comparar contraseñas directamente
             if (password !== user.password) {
                 return res.status(401).json({ message: 'Contraseña incorrecta' });
             }
@@ -33,7 +33,7 @@ module.exports = (db) => {
                     role: user.rol 
                 }, 
                 process.env.JWT_SECRET, 
-                { expiresIn: '1h' } // El token expirará en 1 hora
+                { expiresIn: '12h' } // El token expirará en 1 hora
             );
 
             // Devolver el token como respuesta
