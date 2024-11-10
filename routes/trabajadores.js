@@ -2,9 +2,19 @@ const express = require('express');
 const router = express.Router();
 
 module.exports = (db) => {
+    // Obtener todos los trabajadores con todos sus campos
+    router.get('/', (req, res) => {
+        const sql = 'SELECT id_usuario, nombre, apellidos, email, password, rol FROM Usuario';
+        db.query(sql, (err, results) => {
+            if (err) return res.status(500).json({ error: 'Error al obtener los trabajadores' });
+            res.json(results);
+        });
+    });
+
+
 
     // Obtener todos los trabajadores con el conteo de clientes
-    router.get('/', (req, res) => {
+    router.get('/conteo', (req, res) => {
         const sql = `
         SELECT Usuario.id_usuario, Usuario.nombre, Usuario.rol, COUNT(Cliente.id_cliente) AS cliente_count
         FROM Usuario
@@ -54,6 +64,20 @@ module.exports = (db) => {
             res.json({ message: 'Trabajador eliminado exitosamente' });
         });
     });
+
+// Actualizar trabajador
+router.put('/editar/:id', (req, res) => {
+    const { id } = req.params;
+    const { nombre, apellidos, email, password, rol } = req.body;
+
+    const sql = 'UPDATE Usuario SET nombre = ?, apellidos = ?, email = ?, password = ?, rol = ? WHERE id_usuario = ?';
+    db.query(sql, [nombre, apellidos, email, password, rol, id], (err, result) => {
+        if (err) return res.status(500).json({ error: 'Error al actualizar el trabajador' });
+        if (result.affectedRows === 0) return res.status(404).json({ message: 'Trabajador no encontrado' });
+        res.json({ message: 'Trabajador actualizado exitosamente' });
+    });
+});
+
 
     return router;
 };
