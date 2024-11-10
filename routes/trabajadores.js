@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 
 module.exports = (db) => {
+
+
     // Obtener todos los trabajadores con todos sus campos
     router.get('/', (req, res) => {
         const sql = 'SELECT id_usuario, nombre, apellidos, email, password, rol FROM Usuario';
@@ -16,7 +18,7 @@ module.exports = (db) => {
     // Obtener todos los trabajadores con el conteo de clientes
     router.get('/conteo', (req, res) => {
         const sql = `
-        SELECT Usuario.id_usuario, Usuario.nombre, Usuario.rol, COUNT(Cliente.id_cliente) AS cliente_count
+        SELECT Usuario.id_usuario, Usuario.nombre, Usuario.apellidos, Usuario.email, Usuario.password, Usuario.rol, COUNT(Cliente.id_cliente) AS cliente_count
         FROM Usuario
         LEFT JOIN Cliente ON Usuario.id_usuario = Cliente.id_trabajador
         WHERE Usuario.rol = "Trabajador"
@@ -65,18 +67,18 @@ module.exports = (db) => {
         });
     });
 
-// Actualizar trabajador
-router.put('/editar/:id', (req, res) => {
-    const { id } = req.params;
-    const { nombre, apellidos, email, password, rol } = req.body;
+    // Actualizar trabajador
+    router.put('/editar/:id', (req, res) => {
+        const { id } = req.params;
+        const { nombre, apellidos, email, password, rol } = req.body;
 
-    const sql = 'UPDATE Usuario SET nombre = ?, apellidos = ?, email = ?, password = ?, rol = ? WHERE id_usuario = ?';
-    db.query(sql, [nombre, apellidos, email, password, rol, id], (err, result) => {
-        if (err) return res.status(500).json({ error: 'Error al actualizar el trabajador' });
-        if (result.affectedRows === 0) return res.status(404).json({ message: 'Trabajador no encontrado' });
-        res.json({ message: 'Trabajador actualizado exitosamente' });
+        const sql = 'UPDATE Usuario SET nombre = ?, apellidos = ?, email = ?, password = ?, rol = ? WHERE id_usuario = ?';
+        db.query(sql, [nombre, apellidos, email, password, rol, id], (err, result) => {
+            if (err) return res.status(500).json({ error: 'Error al actualizar el trabajador' });
+            if (result.affectedRows === 0) return res.status(404).json({ message: 'Trabajador no encontrado' });
+            res.json({ message: 'Trabajador actualizado exitosamente' });
+        });
     });
-});
 
 
     return router;
