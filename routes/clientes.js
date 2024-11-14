@@ -45,6 +45,27 @@ module.exports = (db) => {
         });
     });
 
+    router.delete('/:id', authenticateJWT, (req, res) => {
+        const clienteId = req.params.id;
+        console.log('Eliminando cliente con ID:', clienteId);
+    
+        db.query('DELETE FROM Cliente WHERE id_cliente = ?', [clienteId], (err, result) => {
+            if (err) {
+                console.error('Error al eliminar cliente:', err);
+                return res.status(500).json({ error: 'Error al eliminar cliente' });
+            }
+    
+            if (result.affectedRows === 0) {
+                console.log('Cliente no encontrado en la base de datos');
+                return res.status(404).json({ error: 'Cliente no encontrado' });
+            }
+    
+            console.log('Cliente eliminado correctamente');
+            res.status(200).json({ message: 'Cliente eliminado correctamente' });
+        });
+    });
+    
+
     // Agregar un abono y actualizar el monto del cliente
     router.post('/:id/abonos', (req, res) => {
         const clienteId = req.params.id;
@@ -64,29 +85,23 @@ module.exports = (db) => {
                 if (err) {
                     return db.rollback(() => res.status(500).json({ error: 'Error al agregar abono' }));
                 }
-
                 const updateMontoQuery = 'UPDATE Cliente SET monto_actual = GREATEST(monto_actual - ?, 0) WHERE id_cliente = ?';
                 const updateValues = [monto, clienteId];
-
                 db.query(updateMontoQuery, updateValues, (err) => {
                     if (err) {
                         return db.rollback(() => res.status(500).json({ error: 'Error al actualizar el monto del cliente' }));
                     }
-
                     db.query('SELECT forma_pago FROM Cliente WHERE id_cliente = ?', [clienteId], (err, results) => {
                         if (err || results.length === 0) {
                             return db.rollback(() => res.status(500).json({ error: 'Error al obtener forma de pago' }));
                         }
-
                         const formaPago = results[0].forma_pago;
                         const nuevaFechaProximoPago = new Date();
-
                         if (formaPago === 'Diario') {
                             nuevaFechaProximoPago.setDate(nuevaFechaProximoPago.getDate() + 1);
                         } else if (formaPago === 'Semanal') {
                             nuevaFechaProximoPago.setDate(nuevaFechaProximoPago.getDate() + 7);
                         }
-
                         db.query(
                             'UPDATE Cliente SET fecha_proximo_pago = ? WHERE id_cliente = ?',
                             [nuevaFechaProximoPago.toISOString().split('T')[0], clienteId],
@@ -147,18 +162,26 @@ module.exports = (db) => {
             fechaProximoPago = new Date(fechaRegistro);
             fechaProximoPago.setDate(fechaProximoPago.getDate() + 7);
         }
-
         const query = `
         INSERT INTO Cliente (nombre, direccion, telefono, producto_id, quilates, precio_total, forma_pago, monto_actual, fecha_registro, fecha_proximo_pago, id_trabajador)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
         const values = [nombre, direccion, telefono, producto_id, quilates, precio_total, forma_pago, monto_actual, fechaRegistro, fechaProximoPago, trabajadorId];
-
         db.query(query, values, (err, result) => {
             if (err) return res.status(500).json({ error: err });
             res.status(201).json({ message: 'Cliente creado exitosamente', clienteId: result.insertId });
         });
     });
+
+    router.get('/clientes/:id_trabajador', (req, res) => {
+        const trabajadorId = req.params.id_trabajador;
+        const query = 'SELECT * FROM Cliente WHERE id_trabajador = ?';
+        db.query(query, [trabajadorId], (err, results) => {
+            if (err) return res.status(500).json({ error: 'Error al obtener los clientes' });
+            res.json(results);
+        });
+    });
+
 
 
     return router;
