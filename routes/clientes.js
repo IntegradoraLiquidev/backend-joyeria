@@ -68,18 +68,18 @@ module.exports = (db) => {
     // Actualizar un cliente existente
     router.put('/:id', authenticateJWT, (req, res) => {
         const clienteId = req.params.id;
-        const { nombre, direccion, telefono, quilates, precio_total, forma_pago, monto_actual } = req.body;
+        const { nombre, direccion, telefono, precio_total, forma_pago, monto_actual } = req.body;
 
-        if (!nombre || !direccion || !telefono || quilates === undefined || precio_total === undefined || !forma_pago || monto_actual === undefined) {
+        if (!nombre || !direccion || !telefono || precio_total === undefined || !forma_pago || monto_actual === undefined) {
             return res.status(400).json({ error: 'Todos los campos son requeridos' });
         }
 
         const query = `
         UPDATE Cliente
-        SET nombre = ?, direccion = ?, telefono = ?, quilates = ?, precio_total = ?, forma_pago = ?, monto_actual = ?
+        SET nombre = ?, direccion = ?, telefono = ?, precio_total = ?, forma_pago = ?, monto_actual = ?
         WHERE id_cliente = ?
     `;
-        const values = [nombre, direccion, telefono, quilates, precio_total, forma_pago, monto_actual, clienteId];
+        const values = [nombre, direccion, telefono, precio_total, forma_pago, monto_actual, clienteId];
 
         db.query(query, values, (err, result) => {
             if (err) return res.status(500).json({ error: 'Error al actualizar cliente' });
@@ -170,10 +170,10 @@ module.exports = (db) => {
 
     // Crear un nuevo cliente
     router.post('/', authenticateJWT, (req, res) => {
-        const { nombre, direccion, telefono, producto_id, quilates, precio_total, forma_pago, monto_actual } = req.body;
+        const { nombre, direccion, telefono, producto_id, precio_total, forma_pago, monto_actual } = req.body;
         const trabajadorId = req.user.id; // Obtener el ID del trabajador del token
 
-        if (!nombre || !direccion || !telefono || !producto_id || !quilates || !precio_total || !forma_pago) {
+        if (!nombre || !direccion || !telefono || !producto_id || !precio_total || !forma_pago) {
             return res.status(400).json({ error: 'Todos los campos son requeridos' });
         }
 
@@ -188,13 +188,20 @@ module.exports = (db) => {
             fechaProximoPago.setDate(fechaProximoPago.getDate() + 7);
         }
         const query = `
-        INSERT INTO Cliente (nombre, direccion, telefono, producto_id, quilates, precio_total, forma_pago, monto_actual, fecha_registro, fecha_proximo_pago, id_trabajador)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO Cliente (nombre, direccion, telefono, producto_id, precio_total, forma_pago, monto_actual, fecha_registro, fecha_proximo_pago, id_trabajador)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
-        const values = [nombre, direccion, telefono, producto_id, quilates, precio_total, forma_pago, monto_actual, fechaRegistro, fechaProximoPago, trabajadorId];
+        const values = [nombre, direccion, telefono, producto_id, precio_total, forma_pago, monto_actual, fechaRegistro, fechaProximoPago, trabajadorId];
+
+        console.log('Valores a insertar:', values);
+
         db.query(query, values, (err, result) => {
-            if (err) return res.status(500).json({ error: err });
-            res.status(201).json({ message: 'Cliente creado exitosamente', clienteId: result.insertId });
+            if (err) {
+                console.error('Error al insertar cliente:', err); // Verifica si hay algún error
+                return res.status(500).json({ error: 'Hubo un problema al agregar el cliente' });
+            }
+            console.log('Cliente insertado correctamente:', result); // Verifica si la inserción fue exitosa
+            res.status(201).json({ message: 'Cliente agregado exitosamente' }); // Asegúrate de enviar una respuesta correcta
         });
     });
 
