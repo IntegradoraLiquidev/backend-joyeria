@@ -24,5 +24,28 @@ module.exports = (db) => {
         });
     });
 
+    router.post('/agregarProducto', (req, res) => {
+        const { nombre, quilates, precio, id_categoria } = req.body;
+
+        if (!nombre || !quilates || !precio || !id_categoria) {
+            return res.status(400).json({ error: 'Todos los campos son requeridos' });
+        }
+
+        const query = `
+            INSERT INTO Producto (nombre, quilates, precio, id_categoria)
+            VALUES (?, ?, ?, ?)
+        `;
+
+        db.query(query, [nombre, quilates, precio, id_categoria], (err, results) => {
+            if (err) {
+                console.error(err);
+                return res.status(500).json({ error: 'Error al crear el producto' });
+            }
+
+            res.status(201).json({ id_producto: results.insertId, nombre, quilates, precio, id_categoria });
+        });
+    });
+
+
     return router;
 };
