@@ -48,23 +48,48 @@ module.exports = (db) => {
     router.delete('/:id', authenticateJWT, (req, res) => {
         const clienteId = req.params.id;
         console.log('Eliminando cliente con ID:', clienteId);
-    
+
         db.query('DELETE FROM Cliente WHERE id_cliente = ?', [clienteId], (err, result) => {
             if (err) {
                 console.error('Error al eliminar cliente:', err);
                 return res.status(500).json({ error: 'Error al eliminar cliente' });
             }
-    
+
             if (result.affectedRows === 0) {
                 console.log('Cliente no encontrado en la base de datos');
                 return res.status(404).json({ error: 'Cliente no encontrado' });
             }
-    
+
             console.log('Cliente eliminado correctamente');
             res.status(200).json({ message: 'Cliente eliminado correctamente' });
         });
     });
-    
+
+    // Actualizar un cliente existente
+    router.put('/:id', authenticateJWT, (req, res) => {
+        const clienteId = req.params.id;
+        const { nombre, direccion, telefono, quilates, precio_total, forma_pago, monto_actual } = req.body;
+
+        if (!nombre || !direccion || !telefono || quilates === undefined || precio_total === undefined || !forma_pago || monto_actual === undefined) {
+            return res.status(400).json({ error: 'Todos los campos son requeridos' });
+        }
+
+        const query = `
+        UPDATE Cliente
+        SET nombre = ?, direccion = ?, telefono = ?, quilates = ?, precio_total = ?, forma_pago = ?, monto_actual = ?
+        WHERE id_cliente = ?
+    `;
+        const values = [nombre, direccion, telefono, quilates, precio_total, forma_pago, monto_actual, clienteId];
+
+        db.query(query, values, (err, result) => {
+            if (err) return res.status(500).json({ error: 'Error al actualizar cliente' });
+            if (result.affectedRows === 0) return res.status(404).json({ error: 'Cliente no encontrado' });
+
+            res.status(200).json({ message: 'Cliente actualizado correctamente' });
+        });
+    });
+
+
 
     // Agregar un abono y actualizar el monto del cliente
     router.post('/:id/abonos', (req, res) => {
