@@ -35,6 +35,20 @@ module.exports = (db) => {
             res.json(result[0]);
         });
     });
+    
+    router.get('/clientes/:id', (req, res) => {
+        const { id } = req.params;
+        const sql = `
+            SELECT Cliente.*, Usuario.nombre AS nombre_trabajador
+            FROM Cliente
+            JOIN Usuario ON Cliente.id_trabajador = Usuario.id_usuario
+            WHERE Usuario.id_usuario = ?;
+        `;
+        db.query(sql, [id], (err, results) => {
+            if (err) return res.status(500).json({ error: 'Error al obtener los clientes' });
+            res.json(results);
+        });
+    });
 
     router.get('/:id/abonos', (req, res) => {
         const clienteId = req.params.id;

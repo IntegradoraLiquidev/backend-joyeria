@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 module.exports = (db) => {
+
     // Obtener todos los trabajadores con todos sus campos
     router.get('/', (req, res) => {
         const sql = 'SELECT id_usuario, nombre, apellidos, email, password, rol FROM Usuario';
@@ -10,6 +11,7 @@ module.exports = (db) => {
             res.json(results);
         });
     });
+
 
     // Obtener todos los trabajadores con el conteo de clientes
     router.get('/conteo', (req, res) => {
