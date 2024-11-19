@@ -3,6 +3,31 @@ const express = require('express');
 const router = express.Router();
 
 module.exports = (db) => {
+    router.get('/productoCategoria', (req, res) => {
+        const { id_categoria } = req.query;
+
+        if (id_categoria) {
+            const query = 'SELECT * FROM Producto WHERE id_categoria = ?';
+            db.query(query, [id_categoria], (err, results) => {
+                if (err) {
+                    console.error(err);
+                    return res.status(500).json({ error: 'Error al obtener los productos' });
+                }
+                return res.json(results);
+            });
+        } else {
+            // Devuelve todos los productos si no se proporciona categoría
+            const query = 'SELECT * FROM Producto';
+            db.query(query, (err, results) => {
+                if (err) {
+                    console.error(err);
+                    return res.status(500).json({ error: 'Error al obtener los productos' });
+                }
+                return res.json(results);
+            });
+        }
+    });
+
     // Ruta GET para obtener productos filtrados por categoría
     router.get('/', (req, res) => {
         const { categoria } = req.query; // Obtener el ID de la categoría desde los query params
