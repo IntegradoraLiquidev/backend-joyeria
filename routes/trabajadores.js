@@ -12,6 +12,24 @@ module.exports = (db) => {
         });
     });
 
+    // Ruta para obtener clientes de un trabajador dividido por monto_actual
+    router.get('/clientes/:id', (req, res) => {
+        const { id } = req.params;
+        const sql = `
+        SELECT id_cliente, nombre, monto_actual
+        FROM Cliente
+        WHERE id_trabajador = ?;
+        `;
+    
+        db.query(sql, [id], (err, results) => {
+            if (err) return res.status(500).json({ error: 'Error al obtener los clientes' });
+    
+            // Enviar todos los clientes en una sola lista
+            res.json({ clientes: results });
+        });
+    });
+    
+
 
     // Obtener todos los trabajadores con el conteo de clientes
     router.get('/conteo', (req, res) => {
@@ -82,6 +100,6 @@ module.exports = (db) => {
         });
     });
 
-    
+
     return router;
 };
