@@ -54,10 +54,16 @@ module.exports = (db) => {
         const { id } = req.params; // ID del cliente
     
         const query = `
-            SELECT p.id_producto, p.nombre, p.quilates, p.precio, p.cantidad 
-            FROM clientes_productos cp
-            JOIN producto p ON cp.producto_id = p.id_producto
-            WHERE cp.cliente_id = ?`;
+           SELECT 
+    p.id_producto, 
+    p.nombre, 
+    p.quilates, 
+    p.precio, 
+    cp.cantidad -- Aquí estamos obteniendo la cantidad de la tabla clientes_productos
+    FROM clientes_productos cp
+    JOIN producto p ON cp.producto_id = p.id_producto
+    WHERE cp.cliente_id = ?;
+`;
     
         db.query(query, [id], (err, results) => {
             if (err) {
@@ -254,6 +260,7 @@ module.exports = (db) => {
             });
         });
     });
+    
     
 
     router.get('/clientes/:id_trabajador', (req, res) => {
