@@ -50,6 +50,24 @@ module.exports = (db) => {
         });
     });
 
+    router.get('/:id/productos', (req, res) => {
+        const { id } = req.params; // ID del cliente
+    
+        const query = `
+            SELECT p.id_producto, p.nombre, p.quilates, p.precio, p.cantidad 
+            FROM clientes_productos cp
+            JOIN producto p ON cp.producto_id = p.id_producto
+            WHERE cp.cliente_id = ?`;
+    
+        db.query(query, [id], (err, results) => {
+            if (err) {
+                console.error(err);
+                return res.status(500).json({ error: 'Error al obtener los productos del cliente' });
+            }
+            return res.json(results);
+        });
+    });
+
     router.get('/:id/abonos', (req, res) => {
         const clienteId = req.params.id;
         const query = 'SELECT monto, fecha, estado FROM abonos WHERE cliente_id = ? ORDER BY fecha DESC';
@@ -79,6 +97,7 @@ module.exports = (db) => {
         });
     });
 
+    
     // Actualizar un cliente existente
     router.put('/:id', authenticateJWT, (req, res) => {
         const clienteId = req.params.id;
@@ -184,16 +203,16 @@ module.exports = (db) => {
 
     // Crear un nuevo cliente
     router.post('/', authenticateJWT, (req, res) => {
-        const { nombre, direccion, telefono, producto_id, precio_total, forma_pago, monto_actual } = req.body;
+        const { nombre, direccion, telefono, productos, precio_total, forma_pago, monto_actual } = req.body;
         const trabajadorId = req.user.id; // Obtener el ID del trabajador del token
-
-        if (!nombre || !direccion || !telefono || !producto_id || !precio_total || !forma_pago) {
+    
+        if (!nombre || !direccion || !telefono || !productos || productos.length === 0 || !precio_total || !forma_pago) {
             return res.status(400).json({ error: 'Todos los campos son requeridos' });
         }
-
+    
         const fechaRegistro = new Date();
         let fechaProximoPago;
-
+    
         if (forma_pago === 'diario') {
             fechaProximoPago = new Date(fechaRegistro);
             fechaProximoPago.setDate(fechaProximoPago.getDate() + 1);
@@ -201,23 +220,41 @@ module.exports = (db) => {
             fechaProximoPago = new Date(fechaRegistro);
             fechaProximoPago.setDate(fechaProximoPago.getDate() + 7);
         }
-        const query = `
-        INSERT INTO Cliente (nombre, direccion, telefono, producto_id, precio_total, forma_pago, monto_actual, fecha_registro, fecha_proximo_pago, id_trabajador)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-        const values = [nombre, direccion, telefono, producto_id, precio_total, forma_pago, monto_actual, fechaRegistro, fechaProximoPago, trabajadorId];
-
-        console.log('Valores a insertar:', values);
-
-        db.query(query, values, (err, result) => {
+    
+        // Query para insertar el cliente
+        const queryCliente = `
+            INSERT INTO Cliente (nombre, direccion, telefono, precio_total, forma_pago, monto_actual, fecha_registro, fecha_proximo_pago, id_trabajador)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+        const valuesCliente = [nombre, direccion, telefono, precio_total, forma_pago, monto_actual, fechaRegistro, fechaProximoPago, trabajadorId];
+    
+        db.query(queryCliente, valuesCliente, (err, result) => {
             if (err) {
-                console.error('Error al insertar cliente:', err); // Verifica si hay algún error
+                console.error('Error al insertar cliente:', err);
                 return res.status(500).json({ error: 'Hubo un problema al agregar el cliente' });
             }
-            console.log('Cliente insertado correctamente:', result); // Verifica si la inserción fue exitosa
-            res.status(201).json({ message: 'Cliente agregado exitosamente' }); // Asegúrate de enviar una respuesta correcta
+    
+            const clienteId = result.insertId; // Obtener el ID del cliente recién insertado
+    
+            // Preparar las queries para insertar los productos
+            const queryProductos = `
+                INSERT INTO clientes_productos (cliente_id, producto_id)
+                VALUES ?
+            `;
+            const valuesProductos = productos.map((productoId) => [clienteId, productoId]);
+    
+            db.query(queryProductos, [valuesProductos], (errProductos) => {
+                if (errProductos) {
+                    console.error('Error al insertar productos del cliente:', errProductos);
+                    return res.status(500).json({ error: 'Hubo un problema al asociar los productos al cliente' });
+                }
+    
+                console.log('Cliente y productos insertados correctamente');
+                res.status(201).json({ message: 'Cliente agregado exitosamente con sus productos' });
+            });
         });
     });
+    
 
     router.get('/clientes/:id_trabajador', (req, res) => {
         const trabajadorId = req.params.id_trabajador;
