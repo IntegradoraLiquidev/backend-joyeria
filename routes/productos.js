@@ -27,6 +27,21 @@ module.exports = (db) => {
             });
         }
     });
+    //Endpoint para obtener un producto:
+
+    router.get('/:id_producto', (req, res) => {
+        const { id_producto } = req.params;
+
+        const query = 'SELECT * FROM Producto WHERE id_producto = ?';
+        db.query(query, [id_producto], (err, results) => {
+            if (err) {
+                console.error(err);
+                return res.status(500).json({ error: 'Error al obtener el producto' });
+            }
+            res.json(results[0]);
+        });
+    });
+
 
     // Ruta GET para obtener productos filtrados por categoría
     router.get('/', (req, res) => {
@@ -50,26 +65,68 @@ module.exports = (db) => {
     });
 
     router.post('/agregarProducto', (req, res) => {
-        const { nombre, quilates, precio, id_categoria } = req.body;
+        const { nombre, quilates, precio, id_categoria, cantidad, } = req.body;
 
-        if (!nombre || !quilates || !precio || !id_categoria) {
+        if (!nombre || !quilates || !precio || !id_categoria || !cantidad) {
             return res.status(400).json({ error: 'Todos los campos son requeridos' });
         }
 
         const query = `
-            INSERT INTO Producto (nombre, quilates, precio, id_categoria)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO Producto (nombre, quilates, precio, id_categoria, cantidad)
+            VALUES (?, ?, ?, ?, ?)
         `;
 
-        db.query(query, [nombre, quilates, precio, id_categoria], (err, results) => {
+        db.query(query, [nombre, quilates, precio, id_categoria, cantidad], (err, results) => {
             if (err) {
                 console.error(err);
                 return res.status(500).json({ error: 'Error al crear el producto' });
             }
 
-            res.status(201).json({ id_producto: results.insertId, nombre, quilates, precio, id_categoria });
+            res.status(201).json({ id_producto: results.insertId, nombre, quilates, precio, id_categoria, cantidad });
         });
     });
+
+    //Endpoint para actualizar un producto:
+
+    router.put('/:id_producto', (req, res) => {
+        const { id_producto } = req.params;
+        const { nombre, quilates, precio, cantidad } = req.body;
+
+        const query = `
+            UPDATE Producto 
+            SET nombre = ?, quilates = ?, precio = ?, cantidad = ?
+            WHERE id_producto = ?
+        `;
+        db.query(query, [nombre, quilates, precio, cantidad, id_producto], (err) => {
+            if (err) {
+                console.error(err);
+                return res.status(500).json({ error: 'Error al actualizar el producto' });
+            }
+            res.json({ message: 'Producto actualizado con éxito' });
+        });
+    });
+
+    //El endpoint de eliminación del producto
+    // Ruta para eliminar un producto por ID
+    router.delete('/:id_producto/eliminarProducto', (req, res) => {
+        const { id_producto } = req.params;
+
+        const query = 'DELETE FROM Producto WHERE id_producto = ?';
+        db.query(query, [id_producto], (err, results) => {
+            if (err) {
+                console.error(err);
+                return res.status(500).json({ error: 'Error al eliminar el producto' });
+            }
+
+            if (results.affectedRows === 0) {
+                return res.status(404).json({ error: 'Producto no encontrado' });
+            }
+
+            res.json({ message: 'Producto eliminado con éxito' });
+        });
+    });
+
+
 
 
     return router;
