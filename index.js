@@ -19,11 +19,11 @@ app.use(bodyParser.json());
 
 // Configurar la conexión a la base de datos
 const db = mysql.createConnection({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME,
-    port: process.env.DB_PORT || 3000,
+    host: process.env.DB_HOST || process.env.DB_HOSTT,
+    user: process.env.DB_USER || process.env.DB_USERR,
+    password: process.env.DB_PASSWORD || process.env.DB_PASSWORDD || '',
+    database: process.env.DB_NAME || process.env.DB_NAMES,
+    port: process.env.DB_PORT || process.env.DB_PORTT || 3000,
 });
 
 // Conectar a la base de datos
@@ -43,7 +43,7 @@ app.use('/api/categorias', categoriasRoutes(db));
 app.use('/api/trabajadores', trabajadoresRoutes(db)); // Usar la nueva ruta
 
 // Iniciar el servidor
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || process.env.DB_PORTT || 3000;
 app.listen(PORT, () => {
     console.log(`Servidor escuchando en el puerto ${PORT}`);
 });
