@@ -23,7 +23,6 @@ const db = mysql.createConnection({
     user: process.env.PROD_DB_USER || process.env.DB_USER,
     password: process.PROD_env.DB_PASSWORD || '',
     database: process.PROD_env.DB_NAME || process.env.DB_NAME,
-    port: process.PROD_env.DB_PORT || process.env.DB_PORT || 3000,
 });
 
 // Conectar a la base de datos
