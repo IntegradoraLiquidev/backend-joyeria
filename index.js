@@ -42,7 +42,7 @@ app.use('/api/categorias', categoriasRoutes(db));
 app.use('/api/trabajadores', trabajadoresRoutes(db)); // Usar la nueva ruta
 
 // Iniciar el servidor
-const PORT = process.PROD_env.DB_PORT || process.env.DB_PORT || 3000;
+const PORT = process.env.PROD_DB_PORT || process.env.DB_PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Servidor escuchando en el puerto ${PORT}`);
 });
